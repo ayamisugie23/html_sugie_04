@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>デザイン議論Chatアプリ</title>
+<link rel="stylesheet" href="css/sample.css">
+</head>
+<body>
+
+<!-- コンテンツ表示画面 -->
+<div>
+    <p style="font-size:35px;text-align:center;">Design discussion</p>
+    <div id="result"></div>
+    <div class="upload"><input type="file" name="file" id="file"></div>
+    <div style="color:#C26043;font-size:15px;">FROM：<input type="text" id="fromname"></div>
+    <div style="color:#C26043;font-size:15px;">TO：<input type="text" id="toname"></div>
+    <div>
+        <textarea id="text" cols="30" rows="10"></textarea>
+        <button id="send">送信</button>
+    </div>
+    <div id="output"></div>
+</div>
+
+<!--/ コンテンツ表示画面 -->
+
+
+
+<!-- JQuery -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<!-- JQuery -->
+
+
+<!--** 以下Firebase **-->
+<!-- The core Firebase JS SDK is always required and must be listed first -->
+<script src="https://www.gstatic.com/firebasejs/7.20.0/firebase.js"></script>
+
+<!-- TODO: Add SDKs for Firebase products that you want to use
+     https://firebase.google.com/docs/web/setup#available-libraries -->
+
+<script>
+  // Your web app's Firebase configuration
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const ref = firebase.database().ref(); //.refはユニークキーを自動で振ってください
+
+//画像アップフラグのセット
+flg = 0;
+
+//関数定義（文字）
+function send(){
+    const fromname = $("#fromname").val();
+    const toname = $("#toname").val();
+    const text = $("#text").val();
+    let now = new Date();
+    let y = now.getFullYear();      //年
+    let mn = now.getMonth();        //月
+    let d = now.getDay();           //日
+    let yymmdd = "";
+    if(mn<10){
+        mn = "0"+mn;  //1桁の場合は10の位に0を追加
+    }
+    if(d<10){
+        d = "0"+d;  //1桁の場合は10の位に0を追加
+    }
+    date = y+"."+mn+"."+d;
+
+    let h = now.getHours();          //時
+    let m = now.getMinutes();        //分
+    let time = "";
+    if(m<10){
+        time = h+":"+"0"+m;  //1桁の場合は10の位に0を文字列で追加
+    }else{
+        time =h+":"+m;
+    }    
+    // alert(fromname+toname+text);
+    //const date = $("#time").val();
+    const msg = {
+        fromname:fromname,
+        toname:toname,
+        text:text,
+        date:date,
+        time:time
+      }
+    ref.push(msg); //refはfirebaseのdatabaseを設定した変数 //set=決まった名前、push=ユニーク
+    
+}
+
+// //関数定義（画像）
+// function sendpic(){
+//     // const uname = $("#uname").val();
+//     // const text = $("#text").val();
+//     let now = new Date();
+//     let y = now.getFullYear();      //年
+//     let mn = now.getMonth();        //月
+//     let d = now.getDay();           //日
+//     let yymmdd = "";
+//     if(mn<10){
+//         mn = "0"+mn;  //1桁の場合は10の位に0を追加
+//     }
+//     if(d<10){
+//         d = "0"+d;  //1桁の場合は10の位に0を追加
+//     }
+//     date = y+"."+mn+"."+d;
+
+//     let h = now.getHours();          //時
+//     let m = now.getMinutes();        //分
+//     let time = "";
+//     if(m<10){
+//         time = h+":"+"0"+m;  //1桁の場合は10の位に0を文字列で追加
+//     }else{
+//         time =h+":"+m;
+//     }    
+//     alert(uname+text);
+//     //const date = $("#time").val();
+//     const msg = {
+//         uname:uname,
+//         text:text,
+//         date:date,
+//         time:time
+//       }
+//     ref.push(msg); //refはfirebaseのdatabaseを設定した変数 //set=決まった名前、push=ユニーク
+    
+// }
+
+
+//画像読み込み
+var file = document.getElementById('file');
+var result = document.getElementById('result');
+
+function loadLocalImage(e) {
+    //ファイル情報を取得
+    var fileData = e.target.files[0];
+
+    //画像ファイル以外の処理には警告
+    if(!fileData.type.match('image.*')) {
+        alert('画像を選択してください');
+        return;
+    }
+
+    //FileReaderオブジェクトを使ってファイル読み込み
+    var reader = new FileReader();
+    //ファイル読み込み後の処理
+    reader.onload = function() {
+        //画像を表示する
+        var img = document.createElement('img');
+        img.src = reader.result;
+        result.appendChild(img);
+        $("#result").append();
+
+        //画像アップフラグ
+        // flg = 1;
+    }
+    //ファイル読み込みを実行
+    reader.readAsDataURL(fileData);
+}   
+
+//ファイルが指定されたら実行
+file.addEventListener('change', loadLocalImage, false);
+
+
+  //文字を送信（FROMとTEXTの未入力は送信しない）
+  $("#send").on("click",function(){
+    if(fromname.value=="" || text.value==""){
+        alert("宛名と本文は入力必須です。");
+    }else{
+        send();
+    }
+  });
+
+  //受信処理
+ref.on("child_added",function(data){  //functionの引数は何でも良い
+    const v = data.val(); //送信されたオブジェクトを取得
+    const k = data.key; //ユニークキーの取得
+    // const h1 = '<p>'+img+'<br>'+v.time+'</p>';
+    const h2 = '<div class="chatbox"><p style="margin:0;padding:0px;font-size:15px;">TO: '+v.toname+'<br><span style="font-size:20px;">'+v.text+'</span><br>'+v.fromname+'<br>'+v.date+' '+v.time+'</p></div>';
+    //テキストパターンと画像パターンの分岐処理
+    //const img = '<p></p>';
+    // if(flg == 0){
+        $("#output").append( h2 );
+        $("#output").scrollTop($("#output")[0].scrollHeight);
+        // alert(flg);
+    // }
+    // if(flg == 1){
+        // result.appendChild(img);
+        // $("#result").append();
+        // flg = 0;
+        // alert(flg);
+        // $("#output").append( h1 );
+        // $("#output").scrollTop($("#output")[0].scrollHeight);
+        // alert(flg);
+    // }
+    //使える？ $("#output").scrollIntoView();
+});
+
+
+//イベント情報取得
+$("#text").on("keydown",function(e){
+    console.log(e);
+    if(e.keyCode == 13){
+        send();    
+    }
+});
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
